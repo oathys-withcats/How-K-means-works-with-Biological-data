@@ -1,45 +1,15 @@
-# K-means Clustering Explorer
+K-means Clustering Explorer
+An interactive web application for teaching and learning the K-means clustering algorithm, built with leaf morphometric data (30 specimens, leaf length × leaf width).
+Features
 
-Interactive web application สำหรับสอน K-means clustering ด้วยข้อมูลสัณฐานวิทยาใบไม้ (leaf morphometric data)
+Step-by-step algorithm visualization — walk through initialization, assignment, and centroid update phases one step at a time, or run to convergence instantly.
+Live distance calculation — hover over any data point to see Euclidean distances to all centroids. Toggle the "Distances" checkbox to display assignment lines for all points simultaneously.
+Adjustable k — switch between k = 2, 3, 4, or 5 clusters and observe how results change.
+Elbow method — a dedicated tab plots total within-cluster sum of squares (WSS) for k = 1–8 to demonstrate optimal cluster selection.
+Data table — view raw specimen data alongside cluster assignments and distances to centroids after running the algorithm.
+Calculation log — a running log records every initialization, assignment, centroid update, and convergence event with numeric detail.
+Metric dashboard — real-time display of iteration count, total WSS, cluster sizes, and convergence status.
 
-## วิธี Deploy บน GitHub Pages
-
-### ขั้นตอนที่ 1 — สร้าง GitHub Repository
-
-1. ไปที่ [github.com](https://github.com) แล้ว sign in
-2. กดปุ่ม **+** มุมขวาบน → เลือก **New repository**
-3. ตั้งชื่อ เช่น `kmeans-explorer`
-4. เลือก **Public**
-5. ติ๊ก **Add a README file**
-6. กด **Create repository**
-
-### ขั้นตอนที่ 2 — อัปโหลดไฟล์
-
-1. ในหน้า repository กด **Add file** → **Upload files**
-2. ลากไฟล์ `index.html` ที่ดาวน์โหลดมาวางลงในหน้า
-3. กด **Commit changes**
-
-### ขั้นตอนที่ 3 — เปิด GitHub Pages
-
-1. ไปที่แท็บ **Settings** (ด้านบนของ repository)
-2. เลื่อนลงที่เมนูซ้ายมือ กด **Pages**
-3. ในส่วน **Source** เลือก **Deploy from a branch**
-4. ในส่วน **Branch** เลือก `main` แล้วเลือก `/ (root)`
-5. กด **Save**
-6. รอประมาณ 1-2 นาที แล้ว refresh หน้า จะเห็น URL ปรากฏด้านบน
-
-### ขั้นตอนที่ 4 — แชร์ลิงก์
-
-URL จะมีรูปแบบ:
-
-```
-https://[ชื่อผู้ใช้].github.io/kmeans-explorer/
-```
-
-คัดลอก URL นี้ส่งให้นิสิตได้เลย ใช้งานได้ทันทีผ่าน browser โดยไม่ต้องติดตั้งอะไรเพิ่ม
-
-## หมายเหตุ
-
-- ไฟล์นี้เป็น standalone HTML ไม่ต้อง build หรือติดตั้ง dependencies ใด ๆ
-- ใช้งานได้ทั้งบน desktop และ mobile browser
-- ต้องเชื่อมต่ออินเทอร์เน็ตเพื่อโหลด font และ React library จาก CDN
+Dataset
+SpecimenLeaf length (cm)Leaf width (cm)L01–L082.4 – 4.52.3 – 4.5L09–L104.8 – 5.35.1 – 6.2L11–L206.7 – 8.85.4 – 8.6L21–L295.6 – 8.92.2 – 4.7L305.97.4
+30 specimens spanning three apparent morphotypes: small leaves (short and narrow), large-broad leaves (long and wide), and long-narrow leaves (long but narrow).
