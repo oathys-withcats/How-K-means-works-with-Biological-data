@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>K-means Clustering Explorer — Leaf Morphometric Data</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fafaf7;font-family:'DM Sans','Segoe UI',system-ui,sans-serif;color:#1a1a18}
+#root{min-height:100vh}
+header{border-bottom:1px solid #e8e5dd;padding:20px 32px;background:#fff}
+.header-inner{max-width:900px;margin:0 auto}
+.header-row{display:flex;align-items:center;gap:10px}
+.logo{width:32px;height:32px;border-radius:8px;background:#2d6a4f;display:flex;align-items:center;justify-content:center}
+h1{font-size:18px;font-weight:500;letter-spacing:-0.02em}
+.subtitle{font-size:13px;color:#8a8880;margin-top:4px;margin-left:42px}
+.container{max-width:900px;margin:0 auto;padding:24px 32px}
+.tabs{display:flex;gap:0;border-bottom:1px solid #e8e5dd;margin-bottom:24px}
+.tab{padding:10px 20px;font-size:13px;font-weight:400;color:#8a8880;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit}
+.tab.active{color:#1a1a18;border-bottom-color:#2d6a4f;font-weight:500}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.controls select{padding:6px 12px;border-radius:6px;border:1px solid #ddd;font-size:13px;font-family:inherit;background:#fff}
+.controls label{font-size:13px;color:#8a8880}
+.btn{padding:6px 16px;border-radius:6px;border:1px solid #ddd;font-size:13px;background:#fff;cursor:pointer;font-family:inherit;color:#1a1a18;transition:background .15s}
+.btn:hover{background:#f0efe8}
+.btn:disabled{opacity:.4;cursor:default}
+.btn:disabled:hover{background:#fff}
+.info-box{background:#fff;border-radius:12px;border:1px solid #e8e5dd;padding:12px 16px;margin-bottom:16px}
+.info-box p{font-size:13px;color:#5a5850;line-height:1.6;min-height:20px}
+.plot-wrap{background:#fff;border-radius:12px;border:1px solid #e8e5dd;overflow:hidden}
+.plot-wrap svg{width:100%;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;font-size:12px;color:#8a8880}
+.legend span{display:flex;align-items:center;gap:4px;margin-right:10px}
+.legend .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:16px}
+.metric-card{background:#fff;border-radius:10px;border:1px solid #e8e5dd;padding:12px 16px}
+.metric-card .ml{font-size:11px;color:#8a8880;text-transform:uppercase;letter-spacing:.04em}
+.metric-card .mv{font-size:22px;font-weight:500;color:#1a1a18;margin-top:2px;font-family:'DM Mono',monospace}
+.metric-card .mv.sm{font-size:14px}
+.log-box{margin-top:20px;background:#fff;border-radius:12px;border:1px solid #e8e5dd;padding:16px 20px;max-height:200px;overflow-y:auto}
+.log-box .log-title{font-size:13px;font-weight:500;color:#1a1a18;margin-bottom:8px;font-family:'DM Mono',monospace}
+.log-box p{font-size:12px;color:#6a6860;line-height:1.7;font-family:'DM Mono',monospace}
+.toggle-row{margin-left:auto;display:flex;gap:12px}
+.toggle-row label{font-size:12px;color:#8a8880;display:flex;align-items:center;gap:4px;cursor:pointer}
+table{width:100%;border-collapse:collapse;font-size:13px;font-family:'DM Mono',monospace}
+thead tr{border-bottom:1px solid #e8e5dd;background:#fafaf7}
+th{padding:10px 16px;text-align:left;font-size:12px;font-weight:500;color:#8a8880}
+td{padding:8px 16px;color:#1a1a18}
+tbody tr{border-bottom:.5px solid #f0efe8}
+.elbow-wrap{background:#fff;border-radius:12px;border:1px solid #e8e5dd;padding:20px}
+.elbow-wrap p{font-size:13px;color:#5a5850;line-height:1.6;margin-bottom:16px}
+.cluster-dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.9/babel.min.js"></script>
+<script type="text/babel">
+const {useState,useRef,useEffect,useCallback} = React;
+
+const LEAF_DATA = [
+  {id:"L01",x:2.9,y:3.4},{id:"L02",x:3.6,y:2.8},{id:"L03",x:2.4,y:4.1},{id:"L04",x:4.2,y:3.7},
+  {id:"L05",x:3.1,y:2.3},{id:"L06",x:3.8,y:4.5},{id:"L07",x:2.7,y:3.9},{id:"L08",x:4.5,y:2.6},
+  {id:"L09",x:5.3,y:5.1},{id:"L10",x:4.8,y:6.2},{id:"L11",x:7.4,y:6.8},{id:"L12",x:8.2,y:7.5},
+  {id:"L13",x:6.9,y:7.9},{id:"L14",x:8.5,y:6.4},{id:"L15",x:7.6,y:8.3},{id:"L16",x:8.8,y:7.2},
+  {id:"L17",x:7.1,y:6.5},{id:"L18",x:8.3,y:8.6},{id:"L19",x:6.7,y:5.8},{id:"L20",x:8.0,y:7.6},
+  {id:"L21",x:7.2,y:2.7},{id:"L22",x:8.1,y:3.5},{id:"L23",x:6.8,y:2.2},{id:"L24",x:8.6,y:3.1},
+  {id:"L25",x:7.5,y:4.3},{id:"L26",x:8.9,y:2.5},{id:"L27",x:7.0,y:3.8},{id:"L28",x:6.3,y:4.7},
+  {id:"L29",x:5.6,y:3.2},{id:"L30",x:5.9,y:7.4},
+];
+
+const COLORS = [
+  {main:"#2d6a4f",light:"#d8f3dc"},{main:"#9b2226",light:"#fde8e8"},
+  {main:"#005f73",light:"#d4eef4"},{main:"#bb3e03",light:"#fde4d0"},
+  {main:"#7b2cbf",light:"#ede0f7"},
+];
+
+const eucDist=(a,b)=>Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);
+
+function runFullKmeans(data,k){
+  let idx=[];
+  while(idx.length<k){let r=Math.floor(Math.random()*data.length);if(!idx.includes(r))idx.push(r);}
+  let cs=idx.map(i=>({x:data[i].x,y:data[i].y}));
+  let asgn=[];
+  for(let iter=0;iter<100;iter++){
+    asgn=data.map(p=>{let mn=Infinity,mc=0;cs.forEach((c,ci)=>{let d=eucDist(p,c);if(d<mn){mn=d;mc=ci;}});return mc;});
+    let ncs=cs.map((c,ci)=>{let pts=data.filter((_,i)=>asgn[i]===ci);if(!pts.length)return c;return{x:pts.reduce((s,p)=>s+p.x,0)/pts.length,y:pts.reduce((s,p)=>s+p.y,0)/pts.length};});
+    let moved=ncs.some((c,i)=>eucDist(c,cs[i])>0.0001);cs=ncs;if(!moved)break;
+  }
+  return data.reduce((s,p,i)=>{let c=cs[asgn[i]];return s+(p.x-c.x)**2+(p.y-c.y)**2;},0);
+}
+
+function App(){
+  const [k,setK]=useState(3);
+  const [centroids,setCentroids]=useState([]);
+  const [assignments,setAssignments]=useState([]);
+  const [stepPhase,setStepPhase]=useState("idle");
+  const [iteration,setIteration]=useState(0);
+  const [history,setHistory]=useState([]);
+  const [tab,setTab]=useState("algo");
+  const [hoveredPoint,setHoveredPoint]=useState(null);
+  const [elbowData,setElbowData]=useState(null);
+  const [showLabels,setShowLabels]=useState(true);
+  const [showDistLines,setShowDistLines]=useState(false);
+  const svgRef=useRef(null);
+  const prevAssignRef=useRef([]);
+
+  const xMin=1.5,xMax=10.5,yMin=1.5,yMax=10;
+  const plotW=600,plotH=420;
+  const pad={l:52,r:20,t:16,b:44};
+  const innerW=plotW-pad.l-pad.r;
+  const innerH=plotH-pad.t-pad.b;
+  const sx=v=>pad.l+((v-xMin)/(xMax-xMin))*innerW;
+  const sy=v=>pad.t+(1-(v-yMin)/(yMax-yMin))*innerH;
+
+  const doInit=useCallback(()=>{
+    let idx=[];while(idx.length<k){let r=Math.floor(Math.random()*LEAF_DATA.length);if(!idx.includes(r))idx.push(r);}
+    const cs=idx.map(i=>({x:LEAF_DATA[i].x,y:LEAF_DATA[i].y}));
+    setCentroids(cs);setAssignments([]);setStepPhase("initialized");setIteration(0);
+    setHistory([{type:"init",centroids:cs.map(c=>({...c}))}]);prevAssignRef.current=[];
+  },[k]);
+
+  const doAssign=useCallback(()=>{
+    const asgn=LEAF_DATA.map(p=>{let mn=Infinity,mc=0;centroids.forEach((c,ci)=>{let d=eucDist(p,c);if(d<mn){mn=d;mc=ci;}});return mc;});
+    const changed=prevAssignRef.current.length?LEAF_DATA.filter((_,i)=>prevAssignRef.current[i]!==asgn[i]).length:LEAF_DATA.length;
+    if(prevAssignRef.current.length&&changed===0){setStepPhase("converged");setHistory(h=>[...h,{type:"converged",iteration}]);return true;}
+    setAssignments(asgn);prevAssignRef.current=asgn;setStepPhase("assigned");setIteration(i=>i+1);
+    setHistory(h=>[...h,{type:"assign",changed,assignments:[...asgn]}]);return false;
+  },[centroids,iteration]);
+
+  const doUpdate=useCallback(()=>{
+    const ncs=centroids.map((c,ci)=>{const pts=LEAF_DATA.filter((_,i)=>assignments[i]===ci);if(!pts.length)return c;
+    return{x:+(pts.reduce((s,p)=>s+p.x,0)/pts.length).toFixed(4),y:+(pts.reduce((s,p)=>s+p.y,0)/pts.length).toFixed(4)};});
+    setCentroids(ncs);setStepPhase("updated");setHistory(h=>[...h,{type:"update",centroids:ncs.map(c=>({...c}))}]);
+  },[centroids,assignments]);
+
+  const doStep=useCallback(()=>{
+    if(stepPhase==="initialized"||stepPhase==="updated")doAssign();
+    else if(stepPhase==="assigned")doUpdate();
+  },[stepPhase,doAssign,doUpdate]);
+
+  const doRunAll=useCallback(()=>{
+    let cs=centroids.map(c=>({...c})),asgn=[],prev=prevAssignRef.current,it=iteration;
+    for(let loop=0;loop<100;loop++){
+      asgn=LEAF_DATA.map(p=>{let mn=Infinity,mc=0;cs.forEach((c,ci)=>{let d=eucDist(p,c);if(d<mn){mn=d;mc=ci;}});return mc;});it++;
+      const changed=prev.length?LEAF_DATA.filter((_,i)=>prev[i]!==asgn[i]).length:LEAF_DATA.length;
+      if(prev.length&&changed===0){it--;break;}prev=[...asgn];
+      cs=cs.map((c,ci)=>{const pts=LEAF_DATA.filter((_,i)=>asgn[i]===ci);if(!pts.length)return c;
+      return{x:+(pts.reduce((s,p)=>s+p.x,0)/pts.length).toFixed(4),y:+(pts.reduce((s,p)=>s+p.y,0)/pts.length).toFixed(4)};});
+    }
+    setCentroids(cs);setAssignments(asgn);prevAssignRef.current=asgn;setIteration(it);setStepPhase("converged");
+    setHistory(h=>[...h,{type:"converged",iteration:it}]);
+  },[centroids,iteration]);
+
+  const doReset=useCallback(()=>{setCentroids([]);setAssignments([]);setStepPhase("idle");setIteration(0);setHistory([]);prevAssignRef.current=[];},[]);
+
+  const calcWSS=()=>{if(!assignments.length||!centroids.length)return 0;return LEAF_DATA.reduce((s,p,i)=>{const c=centroids[assignments[i]];return s+(p.x-c.x)**2+(p.y-c.y)**2;},0);};
+
+  useEffect(()=>{
+    if(tab==="elbow"&&!elbowData){
+      const vals=[];for(let kv=1;kv<=8;kv++){let best=Infinity;for(let t=0;t<20;t++){const w=runFullKmeans(LEAF_DATA,kv);if(w<best)best=w;}vals.push(best);}
+      setElbowData(vals);
+    }
+  },[tab,elbowData]);
+
+  const clusterSizes=centroids.map((_,ci)=>LEAF_DATA.filter((_,i)=>assignments[i]===ci).length);
+  const wss=calcWSS();
+  const isRunning=stepPhase!=="idle"&&stepPhase!=="converged";
+  const statusText={
+    idle:"Press Initialize to place random centroids on the scatter plot.",
+    initialized:k+" centroids placed. Press Next step to assign each leaf specimen to its nearest centroid.",
+    assigned:"All 30 specimens assigned. Press Next step to recalculate centroid positions as cluster means.",
+    updated:"Centroids moved to new mean positions. WSS = "+wss.toFixed(2)+". Press Next step to re-assign.",
+    converged:"Converged after "+iteration+" iteration"+(iteration!==1?"s":"")+". No specimens changed cluster. Final WSS = "+wss.toFixed(2)+".",
+  };
+  const xTicks=[2,3,4,5,6,7,8,9,10],yTicks=[2,3,4,5,6,7,8,9];
+
+  return (
+    <div>
+      <header>
+        <div className="header-inner">
+          <div className="header-row">
+            <div className="logo">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2"/><circle cx="8" cy="9" r="1.5" fill="#fff"/><circle cx="15" cy="8" r="1.5" fill="#fff"/><circle cx="10" cy="15" r="1.5" fill="#fff"/><circle cx="16" cy="14" r="1.5" fill="#fff"/></svg>
+            </div>
+            <h1>K-means clustering explorer</h1>
+          </div>
+          <p className="subtitle">Leaf morphometric dataset — 30 specimens, leaf length × leaf width</p>
+        </div>
+      </header>
+
+      <div className="container">
+        <div className="tabs">
+          {["algo","elbow","data"].map(t=>(
+            <button key={t} className={"tab"+(tab===t?" active":"")} onClick={()=>setTab(t)}>
+              {t==="algo"?"Algorithm":t==="elbow"?"Elbow method":"Data table"}
+            </button>
+          ))}
+        </div>
+
+        {tab==="algo"&&(
+          <>
+            <div className="controls">
+              <label>k =</label>
+              <select value={k} onChange={e=>{setK(+e.target.value);doReset();}}>
+                {[2,3,4,5].map(v=><option key={v} value={v}>{v}</option>)}
+              </select>
+              <button className="btn" onClick={doInit}>{stepPhase==="idle"?"Initialize":"Re-initialize"}</button>
+              <button className="btn" onClick={doStep} disabled={!isRunning}>Next step</button>
+              <button className="btn" onClick={doRunAll} disabled={!isRunning}>Run to end</button>
+              <button className="btn" onClick={doReset}>Reset</button>
+              <div className="toggle-row">
+                <label><input type="checkbox" checked={showLabels} onChange={()=>setShowLabels(!showLabels)} /> IDs</label>
+                <label><input type="checkbox" checked={showDistLines} onChange={()=>setShowDistLines(!showDistLines)} /> Distances</label>
+              </div>
+            </div>
+
+            <div className="info-box"><p>{statusText[stepPhase]}</p></div>
+
+            <div className="plot-wrap">
+              <svg ref={svgRef} viewBox={"0 0 "+plotW+" "+plotH}
+                onMouseMove={e=>{
+                  const rect=svgRef.current.getBoundingClientRect();const scl=plotW/rect.width;
+                  const mx=(e.clientX-rect.left)*scl,my=(e.clientY-rect.top)*scl;
+                  let cl=null,minD=20;
+                  LEAF_DATA.forEach((p,i)=>{const dx=sx(p.x)-mx,dy=sy(p.y)-my,d=Math.sqrt(dx*dx+dy*dy);if(d<minD){minD=d;cl=i;}});
+                  setHoveredPoint(cl);
+                }}
+                onMouseLeave={()=>setHoveredPoint(null)}
+              >
+                {xTicks.map(v=>(
+                  <g key={"x"+v}>
+                    <line x1={sx(v)} y1={pad.t} x2={sx(v)} y2={plotH-pad.b} stroke="#f0efe8" strokeWidth="0.5"/>
+                    <text x={sx(v)} y={plotH-pad.b+18} textAnchor="middle" fontSize="11" fill="#aaa8a0" fontFamily="'DM Mono',monospace">{v}</text>
+                  </g>
+                ))}
+                {yTicks.map(v=>(
+                  <g key={"y"+v}>
+                    <line x1={pad.l} y1={sy(v)} x2={plotW-pad.r} y2={sy(v)} stroke="#f0efe8" strokeWidth="0.5"/>
+                    <text x={pad.l-10} y={sy(v)+4} textAnchor="end" fontSize="11" fill="#aaa8a0" fontFamily="'DM Mono',monospace">{v}</text>
+                  </g>
+                ))}
+                <text x={(pad.l+plotW-pad.r)/2} y={plotH-4} textAnchor="middle" fontSize="12" fill="#8a8880">Leaf length (cm)</text>
+                <text x={14} y={(pad.t+plotH-pad.b)/2} textAnchor="middle" fontSize="12" fill="#8a8880" transform={"rotate(-90,14,"+((pad.t+plotH-pad.b)/2)+")"}>Leaf width (cm)</text>
+
+                {assignments.length>0&&centroids.map((c,ci)=>{
+                  const pts=LEAF_DATA.filter((_,i)=>assignments[i]===ci);if(pts.length<2)return null;
+                  const cx2=pts.reduce((s,p)=>s+p.x,0)/pts.length,cy2=pts.reduce((s,p)=>s+p.y,0)/pts.length;
+                  let maxR=0;pts.forEach(p=>{const d=eucDist(p,{x:cx2,y:cy2});if(d>maxR)maxR=d;});
+                  const rPx=(maxR/(xMax-xMin))*innerW*1.2;
+                  return <circle key={"bg"+ci} cx={sx(cx2)} cy={sy(cy2)} r={Math.max(rPx,28)} fill={COLORS[ci].light} opacity="0.6"/>;
+                })}
+
+                {showDistLines&&stepPhase==="assigned"&&LEAF_DATA.map((p,i)=>{
+                  const c=centroids[assignments[i]];
+                  return <line key={"dl"+i} x1={sx(p.x)} y1={sy(p.y)} x2={sx(c.x)} y2={sy(c.y)} stroke={COLORS[assignments[i]].main} strokeWidth="0.5" opacity="0.3" strokeDasharray="3,3"/>;
+                })}
+
+                {hoveredPoint!==null&&assignments.length>0&&centroids.map((c,ci)=>(
+                  <line key={"hl"+ci} x1={sx(LEAF_DATA[hoveredPoint].x)} y1={sy(LEAF_DATA[hoveredPoint].y)} x2={sx(c.x)} y2={sy(c.y)} stroke={COLORS[ci].main} strokeWidth="1" opacity="0.5" strokeDasharray="4,4"/>
+                ))}
+
+                {LEAF_DATA.map((p,i)=>{
+                  const col=assignments.length?COLORS[assignments[i]]:{main:"#b0aea4"};
+                  const isHov=hoveredPoint===i;
+                  return (
+                    <g key={"p"+i}>
+                      <circle cx={sx(p.x)} cy={sy(p.y)} r={isHov?7:5} fill={assignments.length?col.main:"#b0aea4"} stroke="#fff" strokeWidth="1.5" style={{transition:"r 0.15s,fill 0.3s"}}/>
+                      {showLabels&&<text x={sx(p.x)} y={sy(p.y)-9} textAnchor="middle" fontSize="9" fill={assignments.length?col.main:"#999"} fontFamily="'DM Mono',monospace" fontWeight="500" opacity={isHov?1:0.7}>{p.id}</text>}
+                    </g>
+                  );
+                })}
+
+                {centroids.map((c,ci)=>(
+                  <g key={"c"+ci}>
+                    <polygon points={sx(c.x)+","+(sy(c.y)-11)+" "+(sx(c.x)+9)+","+(sy(c.y)+5)+" "+(sx(c.x)-9)+","+(sy(c.y)+5)} fill={COLORS[ci].main} stroke="#fff" strokeWidth="2" style={{transition:"all 0.4s ease"}}/>
+                    <text x={sx(c.x)} y={sy(c.y)-16} textAnchor="middle" fontSize="11" fontWeight="500" fill={COLORS[ci].main} fontFamily="'DM Mono',monospace">{"C"+(ci+1)}</text>
+                  </g>
+                ))}
+
+                {hoveredPoint!==null&&(
+                  <g>
+                    <rect x={sx(LEAF_DATA[hoveredPoint].x)+12} y={sy(LEAF_DATA[hoveredPoint].y)-36} width={assignments.length?170:130} height={assignments.length&&centroids.length?18+centroids.length*16:34} rx="6" fill="#fff" stroke="#e8e5dd" strokeWidth="0.5" opacity="0.95"/>
+                    <text x={sx(LEAF_DATA[hoveredPoint].x)+20} y={sy(LEAF_DATA[hoveredPoint].y)-20} fontSize="11" fill="#1a1a18" fontWeight="500" fontFamily="'DM Mono',monospace">
+                      {LEAF_DATA[hoveredPoint].id+": ("+LEAF_DATA[hoveredPoint].x+", "+LEAF_DATA[hoveredPoint].y+")"}
+                    </text>
+                    {assignments.length>0&&centroids.map((c,ci)=>(
+                      <text key={"tt"+ci} x={sx(LEAF_DATA[hoveredPoint].x)+20} y={sy(LEAF_DATA[hoveredPoint].y)-20+(ci+1)*16} fontSize="10" fill={assignments[hoveredPoint]===ci?COLORS[ci].main:"#bbb"} fontFamily="'DM Mono',monospace" fontWeight={assignments[hoveredPoint]===ci?500:400}>
+                        {"→ C"+(ci+1)+": d = "+eucDist(LEAF_DATA[hoveredPoint],c).toFixed(2)+(assignments[hoveredPoint]===ci?" ✓":"")}
+                      </text>
+                    ))}
+                  </g>
+                )}
+              </svg>
+            </div>
+
+            <div className="legend">
+              {centroids.length>0&&centroids.map((_,ci)=>(
+                <span key={"lg"+ci}><span className="dot" style={{background:COLORS[ci].main}}/> {"Cluster "+(ci+1)+(assignments.length>0?" (n="+clusterSizes[ci]+")":"")}</span>
+              ))}
+            </div>
+
+            {assignments.length>0&&(
+              <div className="metrics">
+                <div className="metric-card"><div className="ml">Iteration</div><div className="mv">{iteration}</div></div>
+                <div className="metric-card"><div className="ml">Total WSS</div><div className="mv">{wss.toFixed(1)}</div></div>
+                <div className="metric-card"><div className="ml">Cluster sizes</div><div className="mv sm">{clusterSizes.join(" / ")}</div></div>
+                <div className="metric-card"><div className="ml">Status</div><div className="mv sm" style={{color:stepPhase==="converged"?"#2d6a4f":"#bb8800"}}>{stepPhase==="converged"?"Converged":"Running"}</div></div>
+              </div>
+            )}
+
+            {history.length>0&&(
+              <div className="log-box">
+                <p className="log-title">Calculation log</p>
+                {history.map((h,i)=>(
+                  <p key={i}>
+                    {h.type==="init"&&("▸ Initialized "+h.centroids.length+" centroids: "+h.centroids.map((c,j)=>"C"+(j+1)+"("+c.x+", "+c.y+")").join(", "))}
+                    {h.type==="assign"&&("▸ Assignment: "+h.changed+" specimen"+(h.changed!==1?"s":"")+" assigned/moved")}
+                    {h.type==="update"&&("▸ Update centroids: "+h.centroids.map((c,j)=>"C"+(j+1)+"("+c.x.toFixed(2)+", "+c.y.toFixed(2)+")").join(", "))}
+                    {h.type==="converged"&&"▸ Converged — no changes detected"}
+                  </p>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {tab==="elbow"&&(
+          <div className="elbow-wrap">
+            <p>Total within-cluster sum of squares (WSS) for k = 1–8. The point where the curve bends sharply (the "elbow") suggests the optimal number of clusters.</p>
+            {elbowData&&(
+              <svg viewBox={"0 0 "+plotW+" 320"} style={{width:"100%",display:"block"}}>
+                {[0,1,2,3,4].map(i=>{
+                  const v=(elbowData[0]*1.05*i)/4,cy2=280-(i/4)*248;
+                  return(<g key={"ey"+i}><line x1={pad.l} y1={cy2} x2={plotW-pad.r} y2={cy2} stroke="#f0efe8" strokeWidth="0.5"/><text x={pad.l-10} y={cy2+4} textAnchor="end" fontSize="11" fill="#aaa8a0" fontFamily="'DM Mono',monospace">{v.toFixed(0)}</text></g>);
+                })}
+                {elbowData.map((_,i)=>{const cx2=pad.l+(i/7)*innerW;return <text key={"ex"+i} x={cx2} y={298} textAnchor="middle" fontSize="11" fill="#aaa8a0" fontFamily="'DM Mono',monospace">{i+1}</text>;})}
+                <text x={(pad.l+plotW-pad.r)/2} y={316} textAnchor="middle" fontSize="12" fill="#8a8880">Number of clusters (k)</text>
+                <text x={14} y={148} textAnchor="middle" fontSize="12" fill="#8a8880" transform="rotate(-90,14,148)">Total WSS</text>
+                <polyline fill="none" stroke="#2d6a4f" strokeWidth="2" strokeLinejoin="round" points={elbowData.map((w,i)=>(pad.l+(i/7)*innerW)+","+(280-(w/(elbowData[0]*1.05))*248)).join(" ")}/>
+                {elbowData.map((w,i)=>{const cx2=pad.l+(i/7)*innerW,cy2=280-(w/(elbowData[0]*1.05))*248;return <circle key={"ed"+i} cx={cx2} cy={cy2} r={i===2?6:4} fill={i===2?"#9b2226":"#2d6a4f"} stroke="#fff" strokeWidth="1.5"/>;})}
+                <text x={pad.l+(2/7)*innerW+14} y={280-(elbowData[2]/(elbowData[0]*1.05))*248+4} fontSize="12" fill="#9b2226" fontWeight="500">← elbow (k = 3)</text>
+              </svg>
+            )}
+          </div>
+        )}
+
+        {tab==="data"&&(
+          <div style={{background:"#fff",borderRadius:12,border:"1px solid #e8e5dd",overflow:"hidden"}}>
+            <table>
+              <thead><tr><th>ID</th><th>Leaf length (cm)</th><th>Leaf width (cm)</th>{assignments.length>0&&<th>Cluster</th>}{assignments.length>0&&<th>Dist to centroid</th>}</tr></thead>
+              <tbody>
+                {LEAF_DATA.map((p,i)=>(
+                  <tr key={p.id}>
+                    <td>{p.id}</td><td>{p.x}</td><td>{p.y}</td>
+                    {assignments.length>0&&<td><span className="cluster-dot" style={{background:COLORS[assignments[i]].main}}/>{assignments[i]+1}</td>}
+                    {assignments.length>0&&<td style={{color:"#8a8880"}}>{eucDist(p,centroids[assignments[i]]).toFixed(3)}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
